@@ -34,16 +34,23 @@ function App() {
     try {
       await new Promise(resolve => setTimeout(resolve, 100));
 
+      // Calculate a scale factor to ensure the final image is always high resolution (e.g., ~1500px wide)
+      // This fixes the issue where mobile devices (small screen width) exported low-quality images.
+      const currentWidth = posterRef.current.offsetWidth;
+      const targetWidth = 1500;
+      // If the screen is smaller than 1500px, scale it up. If it's already large, keep a minimum scale of 2.
+      const dynamicScale = Math.max(targetWidth / currentWidth, 2);
+
       const canvas = await html2canvas(posterRef.current, {
         useCORS: true,
-        scale: 2, 
+        scale: dynamicScale, 
         logging: false,
         backgroundColor: null,
       });
       
       const link = document.createElement('a');
       link.download = 'my-custom-poster.jpg';
-      link.href = canvas.toDataURL('image/jpeg', 0.9);
+      link.href = canvas.toDataURL('image/jpeg', 1.0); // 1.0 for maximum quality
       link.click();
     } catch (err) {
       console.error('Failed to generate poster:', err);
