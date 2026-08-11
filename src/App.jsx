@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
-import { Upload, Download, ZoomIn, ZoomOut, Move } from 'lucide-react';
-import { Rnd } from 'react-rnd';
+import { Upload, Download, Move } from 'lucide-react';
+import Cropper from 'react-easy-crop';
 import config from './poster-config.json';
 
 function App() {
@@ -10,13 +10,9 @@ function App() {
   const posterRef = useRef(null);
   const fileInputRef = useRef(null);
   
-  // State for image position/size using Rnd
-  const [photoState, setPhotoState] = useState({
-    x: 0,
-    y: 0,
-    width: 400,
-    height: 400
-  });
+  // State for react-easy-crop
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
@@ -24,14 +20,8 @@ function App() {
       const reader = new FileReader();
       reader.onload = (e) => {
         setUserPhoto(e.target.result);
-        // Reset to default center position when a new photo is uploaded
-        // Assuming a standard square image to start
-        setPhotoState({
-          x: 100, // Arbitrary starting points, users will drag to center
-          y: 100,
-          width: 500,
-          height: 'auto'
-        });
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
       };
       reader.readAsDataURL(file);
     }
@@ -67,7 +57,7 @@ function App() {
     <div className="app-container">
       <header>
         <h1>Custom Poster Generator</h1>
-        <p className="subtitle">Upload your photo, adjust it to fit, and generate your personalized poster instantly.</p>
+        <p className="subtitle">Upload your photo, adjust it to fit perfectly, and download instantly.</p>
       </header>
 
       <div className="glass-card">
@@ -98,18 +88,22 @@ function App() {
         </div>
 
         {userPhoto && (
-          <p style={{ color: 'var(--accent)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0' }}>
-            <Move size={16} /> Drag the image to position it. Drag the corners to resize.
+          <p style={{ color: 'var(--accent)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0', textAlign: 'center' }}>
+            <Move size={16} /> Pinch to zoom or scroll to scale. Drag to position.
           </p>
         )}
 
+        {/* 
+          Container for the entire poster preview. 
+          It scales automatically on mobile due to max-width and 100% width.
+        */}
         <div 
           className="poster-preview-container" 
           ref={posterRef} 
-          style={{ position: 'relative', overflow: 'hidden' }}
+          style={{ position: 'relative', overflow: 'hidden', width: '100%' }}
         >
           
-          {/* Base Layer: White Background Block where the hole is */}
+          {/* Base Layer: White Background Block & User Photo Cropper */}
           <div 
             style={{
                position: 'absolute',
@@ -120,71 +114,52 @@ function App() {
                backgroundColor: '#FFFFFF', // Ensures white space remains white
                zIndex: 0
             }}
-          />
+          >
+            {userPhoto ? (
+              <Cropper
+                image={userPhoto}
+                crop={crop}
+                zoom={zoom}
+                aspect={config.width / config.height}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                showGrid={false}
+                style={{
+                  containerStyle: { width: '100%', height: '100%' },
+                  // Hide the dark overlay since we want the image to shine through
+                  cropAreaStyle: { border: 'none', boxShadow: 'none' },
+                  mediaStyle: { objectFit: 'cover' }
+                }}
+              />
+            ) : (
+              // Clickable Placeholder (Black text, White background is handled by base layer)
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                   width: '100%',
+                   height: '100%',
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'center',
+                   flexDirection: 'column',
+                   gap: '10px',
+                   cursor: 'pointer'
+                }}
+              >
+                 <Upload size={40} color="#000000" />
+                 <span style={{ fontWeight: 'bold', fontSize: 'clamp(0.8rem, 3vw, 1.2rem)', color: '#000000', textAlign: 'center', padding: '0 10px' }}>
+                   Click here to upload your photo
+                 </span>
+              </div>
+            )}
+          </div>
 
-          {/* User Photo Overlay (draggable/resizable) */}
-          {userPhoto ? (
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
-               <Rnd
-                 size={{ width: photoState.width, height: photoState.height }}
-                 position={{ x: photoState.x, y: photoState.y }}
-                 onDragStop={(e, d) => {
-                   setPhotoState(prev => ({ ...prev, x: d.x, y: d.y }));
-                 }}
-                 onResizeStop={(e, direction, ref, delta, position) => {
-                   setPhotoState({
-                     width: ref.style.width,
-                     height: ref.style.height,
-                     ...position,
-                   });
-                 }}
-                 lockAspectRatio={true}
-                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-               >
-                 <img 
-                   src={userPhoto} 
-                   alt="User" 
-                   draggable="false" // prevents native drag interfering with Rnd
-                   style={{
-                     width: '100%',
-                     height: '100%',
-                     objectFit: 'cover' // prevents distortion
-                   }} 
-                 />
-               </Rnd>
-            </div>
-          ) : (
-            // Clickable Placeholder (Black text, White background is handled by base layer)
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                 position: 'absolute',
-                 top: `${config.y}%`,
-                 left: `${config.x}%`,
-                 width: `${config.width}%`,
-                 height: `${config.height}%`,
-                 zIndex: 1,
-                 display: 'flex',
-                 alignItems: 'center',
-                 justifyContent: 'center',
-                 flexDirection: 'column',
-                 gap: '10px',
-                 cursor: 'pointer'
-              }}
-            >
-               <Upload size={40} color="#000000" />
-               <span style={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#000000', textAlign: 'center', padding: '0 20px' }}>
-                 Click here to upload your photo
-               </span>
-            </div>
-          )}
-
-          {/* Transparent Poster Overlay on top (hides excess photo parts) */}
+          {/* Transparent Poster Overlay on top (hides excess photo parts and provides the exact frame) */}
           <img 
             src="/poster-transparent.png" 
             alt="Poster Frame" 
             className="poster-image"
-            style={{ position: 'relative', zIndex: 10, pointerEvents: 'none' }}
+            style={{ position: 'relative', zIndex: 10, pointerEvents: 'none', display: 'block', width: '100%' }}
           />
 
         </div>
