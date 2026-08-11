@@ -9,7 +9,7 @@ function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const posterRef = useRef(null);
   const fileInputRef = useRef(null);
-  
+
   // State for react-easy-crop
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -29,7 +29,7 @@ function App() {
 
   const handleDownload = async () => {
     if (!posterRef.current) return;
-    
+
     setIsGenerating(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -43,11 +43,11 @@ function App() {
 
       const canvas = await html2canvas(posterRef.current, {
         useCORS: true,
-        scale: dynamicScale, 
+        scale: dynamicScale,
         logging: false,
         backgroundColor: null,
       });
-      
+
       const link = document.createElement('a');
       link.download = 'my-custom-poster.jpg';
       link.href = canvas.toDataURL('image/jpeg', 1.0); // 1.0 for maximum quality
@@ -63,7 +63,7 @@ function App() {
   return (
     <div className="app-container">
       <header>
-        <h1>Custom Poster Generator</h1>
+        {/* <h1>MFMCAASOYC BIBLE CONFERENCE 2026 Poster Generator</h1> */}
         <p className="subtitle">Upload your photo, adjust it to fit perfectly, and download instantly.</p>
       </header>
 
@@ -74,17 +74,17 @@ function App() {
               <Upload size={20} />
               Upload Photo
             </button>
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={handlePhotoUpload} 
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoUpload}
               ref={fileInputRef}
               style={{ display: 'none' }}
             />
           </div>
 
-          <button 
-            className="btn btn-secondary" 
+          <button
+            className="btn btn-secondary"
             onClick={handleDownload}
             disabled={!userPhoto || isGenerating}
             style={{ opacity: (!userPhoto || isGenerating) ? 0.5 : 1, cursor: (!userPhoto || isGenerating) ? 'not-allowed' : 'pointer' }}
@@ -96,7 +96,7 @@ function App() {
 
         {userPhoto && (
           <p style={{ color: 'var(--accent)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0', textAlign: 'center' }}>
-            <Move size={16} /> Pinch to zoom or scroll to scale. Drag to position.
+            <Move size={16} /> Pinch your image to zoom or scroll to scale. Drag to position.
           </p>
         )}
 
@@ -104,22 +104,22 @@ function App() {
           Container for the entire poster preview. 
           It scales automatically on mobile due to max-width and 100% width.
         */}
-        <div 
-          className="poster-preview-container" 
-          ref={posterRef} 
+        <div
+          className="poster-preview-container"
+          ref={posterRef}
           style={{ position: 'relative', overflow: 'hidden', width: '100%' }}
         >
-          
+
           {/* Base Layer: White Background Block & User Photo Cropper */}
-          <div 
+          <div
             style={{
-               position: 'absolute',
-               top: `${config.y}%`,
-               left: `${config.x}%`,
-               width: `${config.width}%`,
-               height: `${config.height}%`,
-               backgroundColor: '#FFFFFF', // Ensures white space remains white
-               zIndex: 0
+              position: 'absolute',
+              top: `${config.y}%`,
+              left: `${config.x}%`,
+              width: `${config.width}%`,
+              height: `${config.height}%`,
+              backgroundColor: '#FFFFFF', // Ensures white space remains white
+              zIndex: 0
             }}
           >
             {userPhoto ? (
@@ -140,31 +140,31 @@ function App() {
               />
             ) : (
               // Clickable Placeholder (Black text, White background is handled by base layer)
-              <div 
+              <div
                 onClick={() => fileInputRef.current?.click()}
                 style={{
-                   width: '100%',
-                   height: '100%',
-                   display: 'flex',
-                   alignItems: 'center',
-                   justifyContent: 'center',
-                   flexDirection: 'column',
-                   gap: '10px',
-                   cursor: 'pointer'
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  cursor: 'pointer'
                 }}
               >
-                 <Upload size={40} color="#000000" />
-                 <span style={{ fontWeight: 'bold', fontSize: 'clamp(0.8rem, 3vw, 1.2rem)', color: '#000000', textAlign: 'center', padding: '0 10px' }}>
-                   Click here to upload your photo
-                 </span>
+                <Upload size={40} color="#000000" />
+                <span style={{ fontWeight: 'bold', fontSize: 'clamp(0.8rem, 3vw, 1.2rem)', color: '#000000', textAlign: 'center', padding: '0 10px' }}>
+                  Click here to upload your photo
+                </span>
               </div>
             )}
           </div>
 
           {/* Transparent Poster Overlay on top (hides excess photo parts and provides the exact frame) */}
-          <img 
-            src="/poster-transparent.png" 
-            alt="Poster Frame" 
+          <img
+            src="/poster-transparent.png"
+            alt="Poster Frame"
             className="poster-image"
             style={{ position: 'relative', zIndex: 10, pointerEvents: 'none', display: 'block', width: '100%' }}
           />
