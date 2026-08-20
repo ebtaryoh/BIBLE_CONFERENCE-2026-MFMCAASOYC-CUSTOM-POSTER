@@ -48,9 +48,32 @@ function App() {
         backgroundColor: null,
       });
 
+      const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+
+      // Mobile / iOS Safari Fix using Web Share API
+      // If navigator.share and file sharing is supported, use it.
+      if (navigator.share && navigator.canShare) {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], 'my-custom-poster.jpg', { type: 'image/jpeg' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'My Custom Poster',
+              text: 'Join me at the BIBLE CONFERENCE 2026!'
+            });
+            return; // Exit if shared successfully
+          }
+        } catch (err) {
+          console.error('Share failed or was cancelled:', err);
+          // Don't throw here, just fall through to the default download method
+        }
+      }
+
+      // Fallback to normal download (works well on desktop and Android)
       const link = document.createElement('a');
       link.download = 'my-custom-poster.jpg';
-      link.href = canvas.toDataURL('image/jpeg', 1.0); // 1.0 for maximum quality
+      link.href = dataUrl;
       link.click();
     } catch (err) {
       console.error('Failed to generate poster:', err);
