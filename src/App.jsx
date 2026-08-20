@@ -1,7 +1,44 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, Download, Move } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import config from './poster-config.json';
+
+// ─── Toast Component ──────────────────────────────────────────────────────────
+// icon + title + subtitle, slides up from bottom, auto-dismisses after `duration` ms
+function Toast({ toast, onDismiss }) {
+  const [hiding, setHiding] = useState(false);
+
+  // Kick off fade-out `300ms` before the toast fully disappears
+  useEffect(() => {
+    if (!toast) return;
+    const fadeTimer = setTimeout(() => setHiding(true), toast.duration - 300);
+    const removeTimer = setTimeout(() => onDismiss(), toast.duration);
+    return () => { clearTimeout(fadeTimer); clearTimeout(removeTimer); };
+  }, [toast, onDismiss]);
+
+  if (!toast) return null;
+
+  const handleClick = () => {
+    setHiding(true);
+    setTimeout(onDismiss, 300);
+  };
+
+  return (
+    <div
+      className={`toast toast-${toast.type}${hiding ? ' hiding' : ''}`}
+      onClick={handleClick}
+      role="status"
+      aria-live="polite"
+      title="Tap to dismiss"
+    >
+      <span className="toast-icon">{toast.icon}</span>
+      <div className="toast-body">
+        <span className="toast-title">{toast.title}</span>
+        {toast.subtitle && <span className="toast-text">{toast.subtitle}</span>}
+      </div>
+    </div>
+  );
+}
 
 // ─── Device Detection ────────────────────────────────────────────────────────
 /** Returns true on iPhone / iPad / iPod (including iOS 13+ iPad masquerading as Mac) */
@@ -170,7 +207,13 @@ async function saveBlobToDevice(blob, filename) {
 function App() {
   const [userPhoto, setUserPhoto] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [statusMsg, setStatusMsg] = useState(null); // { type: 'success'|'info'|'warn', text }
+  const [toast, setToast] = useState(null); // { type, icon, title, subtitle, duration }
+
+  // Show a toast and auto-clear it when the timer fires
+  const showToast = useCallback((opts) => {
+    setToast({ duration: 5000, ...opts });
+  }, []);
+  const dismissToast = useCallback(() => setToast(null), []);
   const posterRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -223,16 +266,29 @@ function App() {
       const result = await saveBlobToDevice(blob, 'BIBLE-CONFERENCE-2026-Poster.jpg');
 
       if (result.method === 'new-tab') {
-        setStatusMsg({
+        showToast({
           type: 'info',
-          text: '📱 Your poster opened in a new tab. Long-press the image → "Save to Photos" to keep it.',
+          icon: '📱',
+          title: 'Tap & hold to save',
+          subtitle: 'Your poster opened in a new tab — long-press the image → "Save to Photos".',
+          duration: 8000,
         });
       } else if (result.method === 'share') {
-        setStatusMsg({ type: 'success', text: '✅ Poster shared / saved successfully!' });
+        showToast({
+          type: 'success',
+          icon: '🎉',
+          title: 'Poster saved!',
+          subtitle: 'Check your Photos app — it should be there now.',
+        });
       } else if (result.method === 'anchor') {
-        setStatusMsg({ type: 'success', text: '✅ Download started!' });
+        showToast({
+          type: 'success',
+          icon: '✅',
+          title: 'Download started!',
+          subtitle: 'Check your Downloads folder for your poster.',
+        });
       }
-      // share-cancelled: user dismissed sheet — no message needed
+      // share-cancelled: user dismissed iOS sheet — no message needed
     } catch (err) {
       console.error('[Poster] Download failed:', err);
       alert(
@@ -282,25 +338,8 @@ function App() {
           </button>
         </div>
 
-        {/* Status message */}
-        {statusMsg && (
-          <p
-            style={{
-              fontSize: '0.85rem',
-              textAlign: 'center',
-              margin: '0.5rem 0 0',
-              lineHeight: 1.5,
-              color:
-                statusMsg.type === 'success'
-                  ? '#22c55e'
-                  : statusMsg.type === 'info'
-                  ? '#f59e0b'
-                  : '#ef4444',
-            }}
-          >
-            {statusMsg.text}
-          </p>
-        )}
+        {/* Toast notification — rendered fixed at bottom of screen */}
+        <Toast toast={toast} onDismiss={dismissToast} />
 
         {/* Crop hint */}
         {userPhoto && (
