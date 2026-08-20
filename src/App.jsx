@@ -50,9 +50,14 @@ const isIOS = () =>
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Only set crossOrigin for real http/https URLs.
+    // data: and blob: URLs do not support CORS — setting crossOrigin on them
+    // causes silent load failures in WebKit and some Android WebViews.
+    if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => resolve(img);
-    img.onerror = (e) => reject(new Error(`Failed to load image: ${src}`));
+    img.onerror = () => reject(new Error(`Image failed to load: ${src.slice(0, 80)}`));
     img.src = src;
   });
 }
@@ -237,7 +242,7 @@ function App() {
       setCrop({ x: 0, y: 0 });
       setZoom(1);
       croppedAreaRef.current = null;
-      setStatusMsg(null);
+      dismissToast(); // clear any previous download toast
     };
     reader.readAsDataURL(file);
   };
@@ -247,7 +252,7 @@ function App() {
     if (!userPhoto) return;
 
     setIsGenerating(true);
-    setStatusMsg(null);
+    dismissToast(); // clear any previous toast before starting
 
     try {
       // One frame delay so "Generating…" label renders before heavy work starts
