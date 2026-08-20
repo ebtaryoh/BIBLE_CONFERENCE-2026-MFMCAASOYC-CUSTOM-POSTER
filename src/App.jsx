@@ -112,8 +112,11 @@ async function buildPosterCanvas({ userPhoto, croppedArea }) {
 async function saveBlobToDevice(blob, filename) {
   const file = new File([blob], filename, { type: blob.type });
 
-  // ── A: Web Share API ───────────────────────────────────────────────────────
+  // ── A: Web Share API — iOS ONLY ────────────────────────────────────────────
+  // Android users want a direct download, not a share sheet.
+  // <a download> works perfectly on Android, so we skip Share API there.
   const canShare =
+    isIOS() &&
     typeof navigator.share === 'function' &&
     typeof navigator.canShare === 'function' &&
     navigator.canShare({ files: [file] });
@@ -128,13 +131,14 @@ async function saveBlobToDevice(blob, filename) {
       return { method: 'share' };
     } catch (err) {
       if (err.name === 'AbortError') return { method: 'share-cancelled' };
-      // Unexpected error → try next strategy
+      // Unexpected error → fall through to next strategy
       console.warn('[Download] Share API error, trying anchor download:', err);
     }
   }
 
-  // ── B: anchor[download] + blob: URL ───────────────────────────────────────
-  // Only attempt on non-iOS because iOS Safari ignores <a download>
+  // ── B: anchor[download] + blob: URL (Android + Desktop) ───────────────────
+  // Reliable direct download on Android Chrome/Firefox and all desktops.
+  // Skipped on iOS because Safari ignores the download attribute entirely.
   if (!isIOS()) {
     const blobUrl = URL.createObjectURL(blob);
     try {
@@ -151,11 +155,11 @@ async function saveBlobToDevice(blob, filename) {
     }
   }
 
-  // ── C: Open blob in new tab (iOS fallback) ─────────────────────────────────
+  // ── C: Open blob in new tab (iOS fallback when Share API unavailable) ──────
   const blobUrl = URL.createObjectURL(blob);
   const tab = window.open(blobUrl, '_blank');
   if (!tab) {
-    // Pop-up blocked — last resort: open same window
+    // Pop-up blocked — last resort: navigate current window
     window.location.href = blobUrl;
   }
   setTimeout(() => URL.revokeObjectURL(blobUrl), 90_000);
